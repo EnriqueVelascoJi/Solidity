@@ -31,22 +31,44 @@ interface IERC20 {
     event Approval(address indexed _owner, address indexed _spender, uint256 _value);
 }  
 
-//Contract
+//Contrato
 contract ERC20Basic is IERC20 {
+
+    //Variables
+    string public constant name = "KikeInu";
+    string public constant symbol = "KiIn";
+    uint8 public constant decimals = 18;
+
+
 
     event Transfer(address indexed _from, address indexed _to, uint256 _tokens);
     event Approval(address indexed _owner, address indexed _spender, uint256 _tokens);
 
     using SafeMath for uint256;
 
+    //Mapping
+    mapping (address => uint) balances;
+    mapping(address => mapping(address => uint)) allowed;
+    uint256 totalSupply_;
+
+    //Constructor
+    constructor (uint256 initalSupply) public {
+        totalSupply_ = initialSupply;
+        balance[msg.sender] = totalSupply_;
+    }
+
     function totalSupply() public override view returns(uint256) {
-        return 0;
+        return totalSupply_;
     }
-    function balanceOf(address _account) public override view returns(uint256) {
-        return 0;
+    function increaseTotalSupply(uint _newTokensAmount) public {
+        totalSupply_ += _newTokensAmount;
+        balnces[msg.sender] += _newTokensAmount;
     }
-    function allowance(address _owner, address _spender) public override view returns(uint256) {
-        return 0;
+    function balanceOf(address _tokenOwner) public override view returns(uint256) {
+        return balances[_tokenOwner];
+    }
+    function allowance(address _owner, address _delegate) public override view returns(uint256) {
+        return allowed[_owner][_delegate];
     }
     function transfer(address _recipient, uint256 _amount) public override returns(bool) {
         return false;
