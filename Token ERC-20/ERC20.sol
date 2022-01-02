@@ -1,6 +1,12 @@
-pragma solidity >=0.4.4 < 0.7.0;
-pragma solidity ABIEncoderV2;
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.8.0 < 0.9.0;
+pragma experimental ABIEncoderV2;
 import './SafeMath.sol';
+
+//Enrique Velasco --> 0x5B38Da6a701c568545dCfcB03FcB875f56beddC4
+//Luis --> 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2
+//Maria --> 0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db
+
 
 //Interface de nuestro token ERC-20
 interface IERC20 {
@@ -25,10 +31,10 @@ interface IERC20 {
 
     //Eventos
     //Evento que se debe emitir cuando una cantidad de tokens pasa de un origen a un destin
-    event Transfer(address indexed _from, address indexed _to, uint256 _value);
+    // event Transfer(address indexed _from, address indexed _to, uint256 _value);
 
     //Evento que se debe emitit cuando se establece una asignación con el método allowance
-    event Approval(address indexed _owner, address indexed _spender, uint256 _value);
+    // event Approval(address indexed _owner, address indexed _spender, uint256 _value);
 }  
 
 //Contrato
@@ -52,9 +58,9 @@ contract ERC20Basic is IERC20 {
     uint256 totalSupply_;
 
     //Constructor
-    constructor (uint256 initalSupply) public {
-        totalSupply_ = initialSupply;
-        balance[msg.sender] = totalSupply_;
+    constructor (uint256 _initialSupply) public {
+        totalSupply_ = _initialSupply;
+        balances[msg.sender] = totalSupply_;
     }
 
     function totalSupply() public override view returns(uint256) {
@@ -62,7 +68,7 @@ contract ERC20Basic is IERC20 {
     }
     function increaseTotalSupply(uint _newTokensAmount) public {
         totalSupply_ += _newTokensAmount;
-        balnces[msg.sender] += _newTokensAmount;
+        balances[msg.sender] += _newTokensAmount;
     }
     function balanceOf(address _tokenOwner) public override view returns(uint256) {
         return balances[_tokenOwner];
@@ -70,14 +76,34 @@ contract ERC20Basic is IERC20 {
     function allowance(address _owner, address _delegate) public override view returns(uint256) {
         return allowed[_owner][_delegate];
     }
-    function transfer(address _recipient, uint256 _amount) public override returns(bool) {
-        return false;
+    function transfer(address _recipient, uint256 _numTokens) public override returns(bool) {
+        require(_numTokens <= balances[msg.sender]);
+        balances[msg.sender] = balances[msg.sender].sub(_numTokens);
+        balances[_recipient] = balances[_recipient].add(_numTokens);
+
+        //Notificamos la transferencia
+        emit Transfer(msg.sender, _recipient, _numTokens);
+        return true;
     }
-    function approve(address _spender, uint256 _amount) public override returns(bool) {
-        return false;
+    function approve(address _delegate, uint256 _numTokens) public override returns(bool) {
+        require(_numTokens <= balances[msg.sender]);
+        allowed[msg.sender][_delegate] = _numTokens;
+        emit Approval(msg.sender, _delegate, _numTokens);
+        return true;
     }
-    function transferFrom(address _sender,address _recipient, uint256 _amount) public override returns(bool) {
-        return false;
+    function transferFrom(address _owner, address _buyer, uint256 _numTokens) public override returns(bool) {
+        require(_numTokens <= balances[_owner]);
+        require(_numTokens <= allowed[_owner][msg.sender]);
+
+        //Retiramos el numTokens tanto del owner como del spender
+        balances[_owner] = balances[_owner].sub(_numTokens);
+        allowed[_owner][msg.sender] = allowed[_owner][msg.sender].sub(_numTokens);
+        
+        //Se los cedemos al buyer
+        balances[_buyer] = balances[_buyer].add(_numTokens);
+
+        emit Transfer(_owner, _buyer, _numTokens);
+        return true;
     }
 
 }
