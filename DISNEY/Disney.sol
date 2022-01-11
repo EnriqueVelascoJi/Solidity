@@ -97,7 +97,7 @@ contract Disney {
         bool estado_atraccion;
     }
 
-    // Mapping para relacionar un nombre de una tarccion con una estructura de datps de la atraccion
+    // Mapping para relacionar un nombre de una tarccion con una estructura de datos de la atraccion
     mapping(string => atraccion) public MappingAtracciones;
 
     // Array para almecenar el nombre de las atracciones
@@ -190,9 +190,101 @@ contract Disney {
 
     }
 
+    // --------------------- Aparatado de comida ------------
+    //Eventos
+    event provecho(string, uint, address);
+    event alta_menu (string, uint);
+    event baja_menu (string);
+
+    //Estructura del paquete de alimentos
+    struct paquete_alimento {
+        string name;
+        uint precio;
+        bool disponible;
+    }
+
+    //Menu disponible
+    mapping (string => paquete_alimento) Menu;
+
+    //Arreglo que almacena los paquetes de alimentos ofrecidos por DISNEY
+    string[] PaquetesAlimentos;
+
+    //Mapping que relaciona un cliente con su historial de paquetes en alimentos
+    mapping (address => string[]) HistorialPaquetesAlimentos;
+
+    //Funcionalidades
+    //Función que permite a DISNEY dar de alta un nuevo paquete de alimentos
+    function agregarPaquete(string memory _nombre, uint _precio) public Unicamente(msg.sender) {
+
+        //Generamos un nuevo paquete de alimento
+        nuevo_paquete = paquete_alimento(_nombre, _precio, true);
+        Menu[_nombre] = nuevo_paquete;
+
+        //Agregamos
+        PaquetesAlimentos.push(_nombre);
+
+        //Emitimos el evento para notificar a la BC
+        emit alta_menu(_nombre, _precio);
+
+    }
+
+    //Función que permite a DISNEY deshabilitar un paquete de alimentos existentes
+    function deshabilitarPaquete(string memory _nombre) public Unicamente(msg.sender) {
+
+        //Cambiamos el estado de "disponible" del paquete por false
+        Menu[_nombre].disponible = false;
+
+        //Emitimos el evento
+        emit baja_menu(_nombre);
+        
+    }
+
+    //Funcion que permite comprar a un cliente un paquete de alimentos
+    /*
+        Paquete 1 (Pizza) -----> 5 tokens 
+        Paquete 2 (Lasgana) -----> 9 tokens 
+        Paquete 3 (Salad) -----> 7 tokens 
+    */
+    function comprarAlimentos(string memory _nombre) public {
+
+        //Obtener el valor del paquete (tokens) solicitado
+        uint numero_tokens = Menu[_nombre].precio;
+
+        //Comprobamos que el paquete se pueda comprar
+        require(Menu[_nombre].disponible == true, "Se nos termino joven");
+
+        //Comprobamos que se tenga la cantidad de tokens para porder comprar el paquete
+        require(numero_tokens <= misTokens(), "No te alcanza para ese paquete");
+
+        /*
+            El cliente paga la atraccion en Tokens:
+            - Ha sido necesario crear una funcion en ERC20.sol con el nombre de: 'transferencia_disney'
+            debido a que en caso de usar el TransferFrom las direcciones que se escogian 
+            para realizar la transaccion eran equivocadas. Ya que el msg.sender que recibia el metodo
+            TranferFrom era la direccion del contrato.
+        */
+        token.transferDisney(msg.sender, address(this), tokens_atraccion);
+
+        //Almacenamiento en el historia de atracciones del cliente
+        HistorialAtracciones[msg.sender].push(_nombreAtraccion);
+
+        //Emisión del evento para disfrutar de la atraccion
+        emit provecho(_nombre, numero_tokens, msg.sender);
 
 
 
+    }
 
+    //Función que permite ver el Menu de Disney
+    function verMenu() public pure returns(string[] memory) {
+        
+        return PaquetesAlimentos;
+    }
+
+    //Funcion que permite observar el historial de compra de alimentos de un cliente
+    function verHistorialAlimentos() public view returns (string[] memory) {
+        
+        return HistorialPaquetesAlimentos[msg.sender];
+    }
 
 }
