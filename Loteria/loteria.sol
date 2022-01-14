@@ -91,4 +91,88 @@ contract loteria {
     //Eventos
     event boleto_comprado(uint, address);
     event boleto_ganador(uint);
+    event tokens_devueltos(uint, address);
+
+    //Funcion para comprar boletos de loteria
+    function comprarBoleto(uint _boletos) public {
+        //Precio total de los boletos a comprar
+        uint precio_total = _boletos*PrecioBoleto;
+        //Filtrado de los tokens a pagar
+        require(precio_total <= MisTokens(), "Necesitas comprar mas tokens");
+
+        //Transferencia de tokens al owner -> bote/premio
+        token.transfernciaLoteria(msg.sender, owner, precio_total);
+
+        /* 
+        randNonce (numero que solo se utiliza una vez para evitar la multiplicidad de elementos)
+        *Lo convertimos a uint y le sacamos el modulo % 10000 para tomar los ultimos 4 digitos (dando un valor de entre 0-9)
+        */
+        for(uint i = 0; i < _boletos; i++) {
+            uint random = uint(keccak256(abi.encodePacked(now, msg.sender, randNonce))) % 10000;
+            randNonce ++;
+
+            //Almacenamos todos los datos
+            idPersona_boletos[msg.sender].push(random);
+            boletos_comprados.push(random);
+
+            //Asignamos el ADN del boleto a la persona
+            ADN_boleto[random] = msg.sender;
+
+            //Evento
+            emit boletos_comprados(random, msg.sender);
+
+        }
+
+    }
+
+    //Visualizar el numero de boletos de una persona
+    function tusBoletos() public view returns(uint[] memory) {
+        return idPersona_boletos[msg.sender];
+    }
+
+    //Funcion para generar el ganador
+    function generarGanador() public Unicamente(msg.sender) {
+        //Debe haber boletos comprados
+        require(boletos_comprados.length > 0, "No hay boletos comprados");
+
+        //Declaración de la longitud del array
+        uint longitud = boletos_comprados.length;
+
+        //Aleatoriamente elijo un numero entre 0 y la longitud
+        uint posicion_array = uint(uint(keccak256(abi.encodePacked(now))) % longitud);
+        uint eleccion = boletos_comprados[posicion_array];
+
+        //Emision del evento ganador
+        emit boleto_ganador(eleccion);
+
+        //Recuperar la direccion del gaandor
+        address ganador = ADN_boleto[eleccion];
+
+        //Le enviamos tokens del premio al ganador
+        token.transfernciaLoteria(owner, ganador, Bote());
+        
+    }
+    
+    //Funcion que hace regresar los tokens por ether
+    function devolverETH(uint _numTokens) public payable{
+
+        //Verificamos que el numero de tokens sea positivo
+        require(_numTokens > 0, "No puedes devolver cantidades negativas");
+        //Verificar que se tengan los tokens a devolver
+        require(_numTokens <= misTokens(), "No puedes devolver esa cantidad de tokens");
+        
+        //Calcular el monto de ETH que se necesitan devolver
+        uint ETH = precioTokens(_numTokens);
+
+        //Quitamos los tokens del balance del solicitante
+        token.transfernciaLoteria(msg.sender, contrato, _numTokens);
+
+        //Transferimos el monto de ETH
+        payable(msg.sender).transfer(ETH);
+
+        //Emitimos el evento
+        emit tokens_devueltos(_numTokens, msg.sender);
+
+
+    }
 }
