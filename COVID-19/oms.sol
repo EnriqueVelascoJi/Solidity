@@ -96,4 +96,69 @@ contract CentroSalud {
         DireccionContrato = address(this);
 
     }
+
+    // Mapping que relacione una ID con un resultado de un prueba de COVID
+    // mapping(bytes32 => bool) ResultadoCOVID;
+
+    // // Mapping para relacionar el hash de la prueba con el codigo IPFS
+    // mapping(bytes32 => string) Resultado_IPFS;
+
+    //Mappingh para relacionar el hash de la persona con los resultados (siagnostico, codigo IPFS)
+    mapping(bytes32 => ResultadoCOVID) ResultadosCOVID;
+
+    //Estructura de los resultados
+    struct ResultadoCOVID {
+        bool diagnostico;
+        string CodigoIPFS;
+    }
+
+    //Eventos 
+    event NuevoResultado(bool, string);
+
+    //Filtrado de las funciones a ejecutar por el centro de salud
+    modifier UnicamenteCentroSalud(address _direccion) {
+        require(_direccion == DireccionCentroSalud, "No tienes permisos para ejecutar esta funcion");
+        _;
+    }
+
+    //Funcion para emitir un resultado de la prueba de COVID
+    //CID -> QmQhSPRu4E9Jgj1JsVn22rcZKff5vUdXbwMRfqNvSfgDzv
+    function resultadosPruebaCovid(string memory _idPersona, bool _resultadoCOVID, string memory _codigoIPFS) public UnicamenteCentroSalud(msg.sender)  {
+        // Hash de la identificación de la persona
+        bytes32 hash_idPersona = keccak256(abi.encodePacked(_idPersona));
+
+        // //Relacion entre el hash de la persona y el resultado de la prueba COVID
+        // ResultadoCOVID[hash_idPersona] = _resultadoCOVID;
+        // //Relacion con el codigo IPFS
+        // Resultado_IPFS[hash_idPersona] = _codigoIPFS;
+
+        //Relacion del hash de la persona con la estructura de resultados
+        ResultadosCOVID[hash_idPersona] = ResultadoCOVID(_resultadoCOVID, _codigoIPFS);
+
+        //Emitimos el evento
+        emit NuevoResultado(_resultadoCOVID, _codigoIPFS);
+
+    }
+
+    //Funcion que permita la visualizacion de los resultados
+    function verResultados(string memory _idPersona) public view returns(string memory, string memory) {
+
+        //Hash de la identidad de la persona
+        bytes32 hash_idPersona = keccak256(abi.encodePacked(_idPersona));
+
+        // Retorno de un booleano como un string
+        string memory resultadoPrueba;
+
+        if(ResultadosCOVID[hash_idPersona].diagnostico == true) {
+            resultadoPrueba = "Positivo";
+        } else {
+            resultadoPrueba = "Negativo";
+        }
+
+        //Retorno de parametros
+        string memory ipfs = ResultadosCOVID[hash_idPersona].CodigoIPFS;
+        return (resultadoPrueba, ipfs);
+    }
+
+
 }
